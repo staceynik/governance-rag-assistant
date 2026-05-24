@@ -1,0 +1,43 @@
+services:
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+
+    ports:
+      - "9099:9099"
+
+    volumes:
+      - ./UI/pipelines:/app/pipelines
+
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+    restart: unless-stopped
+
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+
+    ports:
+      - "3000:8080"
+
+    volumes:
+      - openwebui_data:/app/backend/data
+
+    depends_on:
+      - pipelines
+
+    environment:
+      - OPENAI_API_BASE_URL=http://pipelines:9099
+      - OPENAI_API_KEY=dummy-key
+
+      - DEFAULT_MODELS=compliance_assistant_pipeline
+      - DEFAULT_PINNED_MODELS=compliance_assistant_pipeline
+
+    restart: unless-stopped
+
+
+volumes:
+  openwebui_data:
