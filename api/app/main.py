@@ -1,6 +1,7 @@
+import os
+import traceback
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import os
 from dotenv import load_dotenv
 from typing import List
 from .schemas import DocType, UploadResponse
@@ -37,6 +38,7 @@ def list_docs():
 async def upload_doc(
     file: UploadFile = File(...),
     doc_type: DocType = Form(..., description=""),
+    doc_id: str | None = Form(None),
 ):
     try:
         content = await file.read()
@@ -48,12 +50,14 @@ async def upload_doc(
         )
         return UploadResponse(doc_id=new_id, doc_type=doc_type, chunks_indexed=chunks)
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/docs/upload/batch")
-async def upload_batch(
-    files: List[UploadFile] = File(...),
+async def upload_doc(
+    file: UploadFile = File(...),
     doc_type: DocType = Form(...),
+    doc_id: str | None = Form(None),
 ):
     results = []
     for f in files:

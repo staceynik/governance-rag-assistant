@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import re
 from typing import List, Optional, Dict, Tuple
 
 from langchain_core.documents import Document
@@ -139,7 +140,10 @@ class RAGStore:
         for doc_id, (doc_type, text) in self.docs.items():
             all_docs.append(Document(
                 page_content=text,
-                metadata={"doc_id": doc_id, "doc_type": doc_type},
+                metadata={
+                    "doc_id": doc_id,
+                    "doc_type": doc_type,
+                },
             ))
 
         if not all_docs:
@@ -147,18 +151,36 @@ class RAGStore:
             return 0
 
         chunks = self.text_splitter.split_documents(all_docs)
+        for idx, chunk in enumerate(chunks):
+            chunk.metadata["chunk_id"] = idx
         self.vectorstore = FAISS.from_documents(chunks, self.embeddings)
         return len(chunks)
 
-    def upsert_document(self, *, doc_type: str, filename: str, content: bytes, doc_id: Optional[str] = None) -> Tuple[str, int]:
+    def upsert_document(
+        self,
+        *,
+        doc_type: str,
+        filename: str,
+        content: bytes,
+        doc_id: Optional[str] = None
+    ) -> Tuple[str, int]:
+
         text = load_text_from_file(filename, content)
+
         if not text.strip():
-            raise ValueError("File was parsed successfully, but no readable text was found.")
+            raise ValueError(
+                "File was parsed successfully, but no readable text was found."
+            )
 
         if doc_id is None:
-            doc_id = f"{doc_type}_{uuid.uuid4().hex[:10]}"
+            clean_name = re.sub(r"[^a-zA-Z0-9]+", "_", filename.lower())
+            clean_name = clean_name.replace(".pdf", "").replace(".md", "")
+            clean_name = clean_name.strip("_")
+
+            doc_id = f"{doc_type}_{clean_name}"
 
         self.docs[doc_id] = (doc_type, text)
+
         chunks_indexed = self._rebuild_index()
 
         self._save_storage()
@@ -166,7 +188,15 @@ class RAGStore:
         return doc_id, chunks_indexed
 
     def list_docs(self):
-        return [{"doc_id": k, "doc_type": v[0], "chars": len(v[1])} for k, v in self.docs.items()]
+        docs = []
+
+        for doc_id, content in self.docs.items():
+            docs.append({
+                "doc_id": doc_id,
+                "chars": len(content),
+            })
+
+        return docs
 
     def _search(self, query: str, k: int = 8, doc_ids: Optional[List[str]] = None, doc_type: Optional[str] = None) -> List[Document]:
         if self.vectorstore is None:
@@ -234,8 +264,18 @@ class RAGStore:
 
         return answer, sorted(set(citations))
 
-    def check_compliance(self, doc_ids: Optional[List[str]] = None, focus: str = "отпуска") -> ComplianceVerdict:
+    def check_compliance(self, doc_ids: Optional[List[str]] = None, focus: str = "vacations") -> ComplianceVerdict:
         llm = build_llm()
+        if llm is None:
+            return ComplianceVerdict(
+                compliant=False,
+                summary="LLM backend is disabled.",
+                violations=[],
+                evidence=[],
+                recommendations=[
+                    "Enable Ollama or OpenAI backend for compliance analysis."
+                ]
+            )
 
         # Retrieve policy documents and supporting documents separately
         policy_docs = self._search(f"company policy {focus} rules requirements", k=10, doc_ids=doc_ids, doc_type="policy")
