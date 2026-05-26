@@ -53,7 +53,7 @@ async def upload_doc(
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/docs/upload/batch")
+""" @app.post("/docs/upload/batch")
 async def upload_doc(
     file: UploadFile = File(...),
     doc_type: DocType = Form(...),
@@ -72,7 +72,7 @@ async def upload_doc(
             "filename": f.filename,
             "chunks_indexed": chunks,
         })
-    return {"uploaded": results}
+    return {"uploaded": results} """
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):

@@ -3,32 +3,29 @@ import uuid
 import json
 import re
 from typing import List, Optional, Dict, Tuple
+from dotenv import load_dotenv
 
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 
-USE_OPENAI = os.getenv("USE_OPENAI", "0") == "1"
+from .schemas import (
+    AskResponse,
+    ComplianceVerdict,
+)
 
-if USE_OPENAI:
-    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-else:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-    ChatOpenAI = None
+load_dotenv()
 
-from langchain_core.prompts import ChatPromptTemplate
-
-from .schemas import ComplianceVerdict
-
-# -----------------------------
-# LLM + Embeddings
-# -----------------------------
+LLM_BACKEND = os.getenv("LLM_BACKEND", "disabled")
+print("ENV PATH LOADED")
+print("LLM_BACKEND ENV =", os.getenv("LLM_BACKEND"))
 
 def build_embeddings():
 
-    use_openai = os.getenv("USE_OPENAI", "0") == "1"
+    backend = os.getenv("LLM_BACKEND", "disabled")
 
-    if use_openai:
+    if backend == "openai":
         from langchain_openai import OpenAIEmbeddings
 
         return OpenAIEmbeddings(
@@ -38,26 +35,41 @@ def build_embeddings():
             )
         )
 
-    else:
-        from langchain_community.embeddings import HuggingFaceEmbeddings
+    from langchain_community.embeddings import HuggingFaceEmbeddings
 
-        return HuggingFaceEmbeddings(
-            model_name=os.getenv(
-                "HF_EMBED_MODEL",
-                "sentence-transformers/all-MiniLM-L6-v2"
-            )
+    return HuggingFaceEmbeddings(
+        model_name=os.getenv(
+            "HF_EMBED_MODEL",
+            "sentence-transformers/all-MiniLM-L6-v2"
         )
+    )
+
 
 def build_llm():
-    if not USE_OPENAI:
-        return None
 
-    from langchain_openai import ChatOpenAI
+    backend = os.getenv("LLM_BACKEND", "disabled")
 
-    return ChatOpenAI(
-        model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
-        temperature=0
-    )
+    print("BUILD LLM BACKEND =", backend)
+
+    if backend == "openai":
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+            temperature=0
+        )
+
+    elif backend == "ollama":
+        from langchain_community.chat_models import ChatOllama
+
+        print("USING OLLAMA")
+
+        return ChatOllama(
+            model="llama3.1:8b",
+            temperature=0
+        )
+
+    return None
 
 # -----------------------------
 # Simple loaders (txt/pdf/docx)
@@ -177,7 +189,7 @@ class RAGStore:
             clean_name = clean_name.replace(".pdf", "").replace(".md", "")
             clean_name = clean_name.strip("_")
 
-            doc_id = f"{doc_type}_{clean_name}"
+            doc_id = f"{doc_type.value}_{clean_name}"
 
         self.docs[doc_id] = (doc_type, text)
 
@@ -193,7 +205,7 @@ class RAGStore:
         for doc_id, content in self.docs.items():
             docs.append({
                 "doc_id": doc_id,
-                "chars": len(content),
+                "chars": len(content[1]),
             })
 
         return docs
