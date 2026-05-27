@@ -1,11 +1,10 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Literal
+from typing import List, Optional
 from enum import Enum
 
 class DocType(str, Enum):
     policy = "policy"
     contract = "contract"
-    resume = "resume"
     other = "other"
 
 class UploadResponse(BaseModel):
@@ -14,7 +13,9 @@ class UploadResponse(BaseModel):
     chunks_indexed: int
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(
+        example="Summarize the uploaded HR policy"
+    )
     doc_ids: Optional[List[str]] = Field(
         default=None,
         description="If not provided, the search will run across all uploaded documents."
@@ -29,6 +30,7 @@ class ComplianceRequest(BaseModel):
     doc_ids: Optional[List[str]] = None
     focus: str = Field(
         default="vacation policy",
+        example="minimum vacation duration",
         description=(
             "Compliance focus area, for example: "
             "'minimum vacation duration', "

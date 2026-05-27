@@ -2,19 +2,18 @@ import os
 import traceback
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from typing import List
-from .schemas import DocType, UploadResponse
-
-load_dotenv('../../notebooks/.env')  
-
 from .rag import RAGStore
 from .schemas import (
-    UploadResponse, AskRequest, AskResponse,
+    DocType, UploadResponse, AskRequest, AskResponse,
     ComplianceRequest, ComplianceVerdict
 )
 
-app = FastAPI(title="Vacation Policy RAG Agent")
+app = FastAPI(
+    title="Governance RAG Assistant",
+    description="AI-powered HR governance and compliance assistant with local and OpenAI LLM support.",
+    version="1.0.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,13 +27,16 @@ store = RAGStore()
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {
+        "status": "ok",
+        "backend": os.getenv("LLM_BACKEND", "disabled")
+    }
 
 @app.get("/docs/list")
 def list_docs():
     return {"docs": store.list_docs()}
 
-@app.post("/docs/upload", response_model=UploadResponse)
+@app.post("/docs/upload", response_model=UploadResponse, status_code=201)
 async def upload_doc(
     file: UploadFile = File(...),
     doc_type: DocType = Form(..., description=""),
@@ -52,27 +54,6 @@ async def upload_doc(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
-
-""" @app.post("/docs/upload/batch")
-async def upload_doc(
-    file: UploadFile = File(...),
-    doc_type: DocType = Form(...),
-    doc_id: str | None = Form(None),
-):
-    results = []
-    for f in files:
-        content = await f.read()
-        doc_id, chunks = store.upsert_document(
-            doc_type=doc_type,
-            filename=f.filename or "file",
-            content=content,
-        )
-        results.append({
-            "doc_id": doc_id,
-            "filename": f.filename,
-            "chunks_indexed": chunks,
-        })
-    return {"uploaded": results} """
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):

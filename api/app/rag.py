@@ -263,8 +263,11 @@ class RAGStore:
                 + context[:3000]
             )
         else:
-            out = llm.invoke(msg)
-            answer = out.content
+            try:
+                out = llm.invoke(msg)
+                answer = out.content
+            except Exception as e:
+                answer = f"LLM generation failed: {str(e)}"
 
         citations = []
         for d in ctx_docs:
@@ -311,5 +314,14 @@ class RAGStore:
         ])
 
         msg = prompt.format_messages(policy_ctx=policy_ctx, docs_ctx=docs_ctx, focus=focus)
-        return verdict_chain.invoke(msg) # type: ignore
-    
+        try:
+            return verdict_chain.invoke(msg)
+        except Exception as e:
+            return ComplianceVerdict(
+                compliant=False,
+                summary=f"Compliance analysis failed: {str(e)}",
+                violations=[],
+                evidence=[],
+                recommendations=["Retry with fewer documents or a different backend."]
+            )
+            
