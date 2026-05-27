@@ -17,10 +17,6 @@ from .schemas import (
 
 load_dotenv()
 
-LLM_BACKEND = os.getenv("LLM_BACKEND", "disabled")
-print("ENV PATH LOADED")
-print("LLM_BACKEND ENV =", os.getenv("LLM_BACKEND"))
-
 def build_embeddings():
 
     backend = os.getenv("LLM_BACKEND", "disabled")
@@ -49,8 +45,6 @@ def build_llm():
 
     backend = os.getenv("LLM_BACKEND", "disabled")
 
-    print("BUILD LLM BACKEND =", backend)
-
     if backend == "openai":
         from langchain_openai import ChatOpenAI
 
@@ -62,10 +56,8 @@ def build_llm():
     elif backend == "ollama":
         from langchain_community.chat_models import ChatOllama
 
-        print("USING OLLAMA")
-
         return ChatOllama(
-            model="llama3.1:8b",
+            model="phi3:mini",
             temperature=0
         )
 
@@ -189,7 +181,9 @@ class RAGStore:
             clean_name = clean_name.replace(".pdf", "").replace(".md", "")
             clean_name = clean_name.strip("_")
 
-            doc_id = f"{doc_type.value}_{clean_name}"
+            doc_type_str = str(doc_type).replace("DocType.", "")
+
+            doc_id = f"{doc_type_str}_{clean_name}"
 
         self.docs[doc_id] = (doc_type, text)
 
@@ -214,7 +208,7 @@ class RAGStore:
         if self.vectorstore is None:
             return []
 
-        docs = self.vectorstore.similarity_search(query, k=max(k * 3, 20))
+        docs = self.vectorstore.similarity_search(query, k=k * 2)
 
         def ok(d: Document) -> bool:
             md = d.metadata or {}
@@ -240,15 +234,18 @@ class RAGStore:
     def ask(self, question: str, doc_ids: Optional[List[str]] = None) -> Tuple[str, List[str]]:
         llm = build_llm()
 
-        ctx_docs = self._search(question, k=5, doc_ids=doc_ids)
+        ctx_docs = self._search(question, k=3, doc_ids=doc_ids)
         context = "\n\n---\n\n".join([f"[{d.metadata.get('doc_type')}:{d.metadata.get('doc_id')}]\n{d.page_content}" for d in ctx_docs])
+        context = context[:4000]
 
         prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
                 "You are an HR document assistant. "
-                "Respond strictly based on the provided context. "
-                "If the available information is insufficient, clearly explain what is missing."
+                "Use only the provided context. "
+                "If the answer cannot be derived from the context, explicitly say so. "
+                "Do not infer missing legal or HR information. "
+                "Keep answers concise and factual."
             ),
             (
                 "human",
