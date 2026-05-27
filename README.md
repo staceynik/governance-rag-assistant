@@ -90,7 +90,7 @@ OPENAI_EMBED_MODEL=text-embedding-3-small
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/governance-rag-assistant.git
+git clone https://github.com/staceynik/governance-rag-assistant.git
 cd governance-rag-assistant
 ```
 
