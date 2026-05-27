@@ -1,4 +1,3 @@
-````markdown
 # Governance RAG Assistant
 
 AI-powered document governance and compliance assistant with semantic retrieval, local LLM support, and structured compliance analysis.
@@ -56,7 +55,7 @@ Answer / Compliance Verdict
 
 Runs fully local inference using Ollama.
 
-Example:
+Example `.env` configuration:
 
 ```env
 LLM_BACKEND=ollama
@@ -64,7 +63,7 @@ LLM_BACKEND=ollama
 HF_EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ```
 
-Recommended lightweight model for development:
+Recommended lightweight model:
 
 ```bash
 ollama pull phi3:mini
@@ -91,7 +90,7 @@ OPENAI_EMBED_MODEL=text-embedding-3-small
 Clone the repository:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/YOUR_USERNAME/governance-rag-assistant.git
 cd governance-rag-assistant
 ```
 
@@ -112,7 +111,7 @@ pip install -r api/requirements.txt
 
 ## Running the Application
 
-Start Ollama (optional for local inference):
+Start Ollama:
 
 ```bash
 ollama serve
@@ -125,7 +124,7 @@ cd api
 uvicorn app.main:app --reload
 ```
 
-Swagger UI:
+Open Swagger UI:
 
 ```text
 http://127.0.0.1:8000/docs
@@ -159,19 +158,11 @@ OPENAI_EMBED_MODEL=text-embedding-3-small
 POST /docs/upload
 ```
 
-Upload and index documents.
-
----
-
 ### Ask Questions
 
 ```http
 POST /ask
 ```
-
-Ask questions over uploaded documents using semantic retrieval.
-
----
 
 ### Compliance Analysis
 
@@ -179,19 +170,11 @@ Ask questions over uploaded documents using semantic retrieval.
 POST /compliance/check
 ```
 
-Analyze uploaded documents against governance or policy requirements.
-
----
-
 ### List Documents
 
 ```http
 GET /docs/list
 ```
-
-Returns indexed documents.
-
----
 
 ### Health Check
 
@@ -199,14 +182,12 @@ Returns indexed documents.
 GET /health
 ```
 
-Returns API status and configured backend.
-
 ---
 
 ## Example Workflow
 
 1. Upload a policy document
-2. Upload employee or governance-related documents
+2. Upload governance-related documents
 3. Ask questions about uploaded content
 4. Run compliance analysis
 5. Retrieve structured compliance verdicts with supporting evidence
@@ -242,6 +223,7 @@ governance-rag-assistant/
 │
 ├── .env.example
 ├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
@@ -257,18 +239,8 @@ governance-rag-assistant/
 
 ---
 
-## Notes
-
-This project is designed as a lightweight, portfolio-oriented AI governance assistant focused on:
-
-- semantic retrieval
-- explainable outputs
-- local AI inference
-- structured compliance analysis
-
-It intentionally avoids unnecessary architectural complexity in favor of a compact and understandable implementation.
-
 ## License
 
 MIT License
-````
+
+
