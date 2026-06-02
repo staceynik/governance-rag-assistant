@@ -290,38 +290,70 @@ class RAGStore:
             )
 
         # Retrieve policy documents and supporting documents separately
-        policy_docs = self._search(f"company policy {focus} rules requirements", k=10, doc_ids=doc_ids, doc_type="policy")
-        supporting_docs  = self._search(f"{focus} vacation minimum duration carry over payment schedule", k=14, doc_ids=doc_ids)
+        policy_docs = self._search(f"company policy {focus} rules requirements", k=4, doc_ids=doc_ids, doc_type="policy")
+        supporting_docs  = self._search(f"{focus} vacation minimum duration carry over payment schedule", k=6, doc_ids=doc_ids)
 
         policy_ctx = "\n\n---\n\n".join([f"[policy:{d.metadata.get('doc_id')}]\n{d.page_content}" for d in policy_docs])
         docs_ctx   = "\n\n---\n\n".join([f"[{d.metadata.get('doc_type')}:{d.metadata.get('doc_id')}]\n{d.page_content}" for d in supporting_docs])
-
-        verdict_chain = llm.with_structured_output(ComplianceVerdict)
-
+        
         prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are an HR compliance analyst. "
-             "Your task is to verify whether the provided documents comply with the company's vacation policy.\n"
-             "Rules:\n"
-             "- Do not invent facts.\n"
-             "- If information is missing, explicitly mention it in the summary and recommendations.\n"
-             "- In evidence, provide short quotations (1-3 lines) and reference the source as [policy:ID] or [contract:ID].\n"),
-            ("human",
-            "Policy excerpts:\n{policy_ctx}\n\n"
-            "Document excerpts:\n{docs_ctx}\n\n"
-            "Check compliance for the following focus area: {focus}\n"
-            "Return a structured compliance verdict."),
+            (
+                "system",
+                "You are an HR compliance analyst. "
+                "Your task is to verify whether the provided documents comply with the company's vacation policy. "
+                "Do not invent facts. "
+                "If information is missing, explicitly mention it."
+            ),
+            (
+                "human",
+                "Policy excerpts:\n{policy_ctx}\n\n"
+                "Document excerpts:\n{docs_ctx}\n\n"
+                "Check compliance for the following focus area: {focus}\n\n"
+                "Respond using exactly this structure:\n\n"
+                "COMPLIANT: Yes or No\n\n"
+                "SUMMARY:\n"
+                "- short summary\n\n"
+                "VIOLATIONS:\n"
+                "- violation 1\n"
+                "- violation 2\n\n"
+                "EVIDENCE:\n"
+                "- quote or reference\n\n"
+                "RECOMMENDATIONS:\n"
+                "- recommendation 1\n"
+            ),
         ])
 
-        msg = prompt.format_messages(policy_ctx=policy_ctx, docs_ctx=docs_ctx, focus=focus)
+        msg = prompt.format_messages(
+            policy_ctx=policy_ctx,
+            docs_ctx=docs_ctx,
+            focus=focus
+        )
+
         try:
-            return verdict_chain.invoke(msg)
+            out = llm.invoke(msg)
+
+            text = out.content
+            print("MODEL OUTPUT:")
+            print(text)
+            print("END MODEL OUTPUT")
+
+            is_compliant = "COMPLIANT: NO" not in text.upper()
+
+            return ComplianceVerdict(
+                compliant=is_compliant,
+                summary=text,
+                violations=[],
+                evidence=[],
+                recommendations=[]
+            )
+
         except Exception as e:
             return ComplianceVerdict(
                 compliant=False,
                 summary=f"Compliance analysis failed: {str(e)}",
                 violations=[],
                 evidence=[],
-                recommendations=["Retry with fewer documents or a different backend."]
+                recommendations=[]
             )
             
+        
