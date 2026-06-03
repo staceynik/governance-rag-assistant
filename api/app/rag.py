@@ -93,6 +93,34 @@ def load_text_from_file(filename: str, content: bytes) -> str:
 # -----------------------------
 # Documents storage + RAG index
 # -----------------------------
+
+def _parse_compliance_text(text: str) -> dict:
+
+    def extract_section(label: str):
+        import re
+
+        pattern = rf"{label}:\s*\n(.*?)(?=\n[A-Z]+:|$)"
+        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+
+        if not match:
+            return []
+
+        block = match.group(1).strip()
+
+        items = re.findall(r"[-•*]\s*(.+)", block)
+
+        return [i.strip() for i in items]
+
+    compliant = "COMPLIANT: NO" not in text.upper()
+
+    return {
+        "compliant": compliant,
+        "summary": text[:500],
+        "violations": extract_section("VIOLATIONS"),
+        "evidence": extract_section("EVIDENCE"),
+        "recommendations": extract_section("RECOMMENDATIONS"),
+    }
+
 class RAGStore:
     def __init__(self):
         self.embeddings = build_embeddings()
@@ -330,24 +358,29 @@ class RAGStore:
         )
 
         try:
-            out = llm.invoke(msg)
 
-            text = out.content
-            print("MODEL OUTPUT:")
-            print(text)
-            print("END MODEL OUTPUT")
+            backend = os.getenv("LLM_BACKEND", "disabled")
 
-            is_compliant = "COMPLIANT: NO" not in text.upper()
+            if backend == "openai":
 
-            return ComplianceVerdict(
-                compliant=is_compliant,
-                summary=text,
-                violations=[],
-                evidence=[],
-                recommendations=[]
-            )
+                verdict_chain = llm.with_structured_output(
+                    ComplianceVerdict
+                )
+
+                return verdict_chain.invoke(msg)
+
+            else:
+
+                out = llm.invoke(msg)
+
+                parsed = _parse_compliance_text(
+                    out.content
+                )
+
+                return ComplianceVerdict(**parsed)
 
         except Exception as e:
+
             return ComplianceVerdict(
                 compliant=False,
                 summary=f"Compliance analysis failed: {str(e)}",
@@ -355,5 +388,3 @@ class RAGStore:
                 evidence=[],
                 recommendations=[]
             )
-            
-        
