@@ -4,8 +4,6 @@ AI-powered document governance and compliance assistant with semantic retrieval,
 
 ---
 
-# Governance RAG Assistant
-
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
 ![RAG](https://img.shields.io/badge/AI-RAG-orange)
