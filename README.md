@@ -11,6 +11,7 @@ AI-powered document governance and compliance assistant with semantic retrieval,
 ![RAG](https://img.shields.io/badge/AI-RAG-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
+https://github.com/user-attachments/assets/88c292e6-a4bb-4ff5-82f2-f7e56d21bb61
 ---
 
 ## Features
