@@ -13,8 +13,9 @@ AI-powered document governance and compliance assistant with semantic retrieval,
 
 Click below to watch the project demonstration:
 
-[▶ Watch Demo Video]
-https://github.com/user-attachments/assets/88c292e6-a4bb-4ff5-82f2-f7e56d21bb61
+## Demo
+
+[▶ Watch Demo Video](https://github.com/user-attachments/assets/88c292e6-a4bb-4ff5-82f2-f7e56d21bb61)
 ---
 
 ## Features
